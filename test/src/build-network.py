@@ -4,10 +4,10 @@
 #
 # let's build the network
 
-def loadData():
+def loadData(dataRoot):
   # get a list of files in the data directory
   import subprocess
-  dataRoot = '../data/'
+
   dataFileList = [dataRoot + tmp for tmp in subprocess.Popen(['ls',dataRoot],stdout = subprocess.PIPE, stderr = subprocess.STDOUT).communicate()[0].rstrip().split('\n')]
   # check the list has all the files
   print dataFileList
@@ -28,15 +28,42 @@ def loadData():
 
   return data
 
-def outputGephi(data):
+def buildEdgeDataDict(data):
+  # initialize dict for storing [[duration],[starttime],[endtime],[user],[type]]
+  edgeData = dict()
+  import re
+  for ride in data:
+    # strip the trip numbers
+    start = re.search(ride[3],'([0-9]+)')
+    destination = re.search(ride[4],'([0-9]+)')
+    edgeKey = start + '-' + destination
+    if edgeKey not in edgeData:
+      edgeData[edgeKey] = [ride[0:3],ride[5:len(ride)]]
+    else:
+      edgeData[edgeKey] = edgeData[edgeKey]+[ride[0:3],ride[5:len(ride)]]
+
+  return edgeData
+
+def outputGephi(dataRoot,edgeData):
   # output an edge list csv for gephi 'vertex1,vertex2,weight'
-  pass
+  f = open(dataRoot+'/gephi.csv','w')
+  f.write('FROM,TO,WEIGHT\n')
+  for key in edgeData:
+    # write the from num, to num, num trips
+    f.write(key.split('-')[0]+','+key.split('-')[1]+','+len(edgeData[key][0])+'\n')
+  f.close()
 
 def main():
-  # first load the data
-  data = loadData()
+  dataRoot = '../data'
+  # first load the data as a list of lists
+  data = loadData(dataRoot)
+  # make a dict of edges (key), and trip details (value) from the list
+  # is this the best data structure for organizing by trips,
+  # or should we not even build this a-proiri (search stored data for 
+  # desired values every time) for enough data
+  edgeData = buildEdgeDataDict(data)
   # print out csv's to be plotted in Gephi (next)
-  outputGephi(data)
+  outputGephi(dataRoot,edgeData)
 
 
 # only run submitted to interpreter
